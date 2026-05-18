@@ -75,6 +75,21 @@ input[type=range] { width:100%; accent-color:#58a6ff; cursor:pointer; }
   pointer-events:none; text-align:center; min-width:260px;
   transition:border-color 0.3s;
 }
+/* Jam progress segments */
+.jp {
+  flex:1; padding:3px 2px; font-size:9px; text-align:center;
+  border:1px solid #30363d; border-radius:3px; color:#8b949e;
+  transition:background 0.3s, color 0.3s;
+}
+.jp.active-red  { background:rgba(139,0,0,0.45); color:#ff9999; border-color:#8B0000; }
+.jp.active-grn  { background:rgba(30,80,30,0.55); color:#88ff88; border-color:#2e7d32; }
+.jp.done        { background:rgba(30,60,30,0.35); color:#66bb66; }
+/* Clip/jam buttons */
+.vbtn.active { background:rgba(88,166,255,0.30); border-color:#58a6ff; color:#c0e0ff; }
+#btnJam { background:rgba(139,0,0,0.15) !important; color:#ff7070 !important; border-color:#8B0000 !important; }
+#btnJam:hover { background:rgba(139,0,0,0.35) !important; }
+/* Jam note */
+#jamNote { font-size:10px; color:#8b949e; border:1px solid #30363d; border-radius:5px; padding:7px 8px; line-height:1.55; }
 </style>
 </head>
 <body>
@@ -125,6 +140,22 @@ input[type=range] { width:100%; accent-color:#58a6ff; cursor:pointer; }
       <button class="vbtn" id="vIso">Iso</button>
     </div>
   </div>
+  <div class="view-btns">
+    <button class="vbtn" id="btnClip">✂ Corte ON</button>
+  </div>
+  <button class="vbtn" id="btnJam" style="width:100%">🪨 Simular Atasco</button>
+  <div id="jamProgress" style="display:none">
+    <div style="font-size:10px;color:#8b949e;margin-bottom:3px">Estado del sistema:</div>
+    <div style="display:flex;gap:2px">
+      <div class="jp" id="jp1">Entrada</div>
+      <div class="jp" id="jp2">Presión</div>
+      <div class="jp" id="jp3">Cede</div>
+      <div class="jp" id="jp4">Restaur.</div>
+    </div>
+  </div>
+  <div id="jamNote" style="display:none">
+    El mecanismo anti-irrompible (toggle plate) protege el equipo cediendo antes que fallen componentes críticos. <em>McCabe &amp; Smith, Cap. 28</em>
+  </div>
 </div>
 
 <!-- Regime bar -->
@@ -153,6 +184,11 @@ renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
 renderer.toneMapping       = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 renderer.outputColorSpace  = THREE.SRGBColorSpace;
+renderer.localClippingEnabled = true;
+
+// ─── Clip plane ───────────────────────────────────────────────────────────────
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.1);
+let clippingOn = false;
 
 // ─── Scene / Camera ──────────────────────────────────────────────────────────
 const scene  = new THREE.Scene();
@@ -370,8 +406,9 @@ const toggleGrp = new THREE.Group();
 scene.add(toggleGrp);
 toggleGrp.position.set(0, -FH/2+0.55, 0);
 
-toggleGrp.add(castRecv(new THREE.Mesh(
-  new THREE.BoxGeometry(0.15, 1.3, JAW_W*0.88), matToggle)));
+const togglePlateMesh = castRecv(new THREE.Mesh(
+  new THREE.BoxGeometry(0.15, 1.3, JAW_W*0.88), matToggle));
+toggleGrp.add(togglePlateMesh);
 
 const toggleSpringGrp = new THREE.Group();
 toggleGrp.add(toggleSpringGrp);
@@ -460,6 +497,150 @@ ground.position.y=BASE_Y-BASE_H/2;
 ground.receiveShadow=true;
 scene.add(ground);
 
+// ─── Cross-section plane at z = 0 (visible when clipping ON) ─────────────────
+const crossSectionMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(FW+1.4, FH+BASE_H+0.6),
+  new THREE.MeshStandardMaterial({color:0x666666, metalness:0.3, roughness:0.7, side:THREE.DoubleSide})
+);
+crossSectionMesh.position.set(0, -BASE_H*0.3, 0);
+crossSectionMesh.visible = false;
+scene.add(crossSectionMesh);
+
+// ─── Apply / remove clipping planes from all meshes in scene ─────────────────
+function applyClipping(on) {
+  scene.traverse(obj => {
+    if(!obj.isMesh || obj === crossSectionMesh) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    mats.forEach(m => {
+      m.clippingPlanes = on ? [clipPlane] : [];
+      m.clipShadows    = on;
+      m.needsUpdate    = true;
+    });
+  });
+  crossSectionMesh.visible = on;
+}
+
+// ─── Jam simulation ───────────────────────────────────────────────────────────
+const JAM = { IDLE:0, P1:1, P2:2, P3:3, P4:4 };
+const JAM_DUR = [0, 0.55, 0.55, 1.0, 1.0];
+let jamPhase     = JAM.IDLE;
+let jamT0        = 0;
+let jamJawOffset = 0;   // extra open angle added on top of normal oscillation
+
+// big red rock (hidden until jam triggered)
+const matJamRock = new THREE.MeshStandardMaterial({color:0x8B0000, metalness:0.1, roughness:0.9, flatShading:true});
+const jamRockMesh = castRecv(new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), matJamRock));
+jamRockMesh.visible = false;
+scene.add(jamRockMesh);
+
+// floating jam label
+const jamLabelEl = document.createElement('div');
+jamLabelEl.className = 'label3d';
+jamLabelEl.style.cssText = 'display:none; font-size:13px; font-weight:700;';
+document.body.appendChild(jamLabelEl);
+const jamLabelPos = new THREE.Vector3(0, 0.5, FD/2+0.5);
+
+function playJamSound(){
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const buf = ctx.createBuffer(1, ctx.sampleRate*0.35, ctx.sampleRate);
+    const d   = buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length)*0.5;
+    const src=ctx.createBufferSource(); src.buffer=buf;
+    const g=ctx.createGain(); g.gain.value=0.25;
+    src.connect(g); g.connect(ctx.destination); src.start();
+  } catch(e){}
+}
+
+function setJamProgress(phase){
+  ['jp1','jp2','jp3','jp4'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.className='jp';
+    if(i+1 < phase)       el.classList.add('done');
+    else if(i+1===phase)  el.classList.add(phase<=2?'active-red':'active-grn');
+  });
+}
+
+function showJamLabel(text, color){
+  jamLabelEl.textContent=text;
+  jamLabelEl.style.color=color;
+  jamLabelEl.style.display='';
+}
+
+function startJam(t){
+  jamPhase=JAM.P1; jamT0=t;
+  jamRockMesh.position.set(0, FH/2+0.3, 0);
+  jamRockMesh.visible=true;
+  document.getElementById('jamProgress').style.display='';
+  document.getElementById('jamNote').style.display='none';
+  togglePlateMesh.position.y=0;
+  matToggle.emissive.setHex(0xFFD54F);
+  matToggle.emissiveIntensity=0.12;
+  movJawGrp.rotation.z=0;
+  scene.position.x=0;
+  setJamProgress(1);
+}
+
+function updateJam(t, eccAngle){
+  if(jamPhase===JAM.IDLE) return 0.25;
+
+  const dt  = t - jamT0;
+  const dur = JAM_DUR[jamPhase];
+  const p   = Math.min(1, dt/dur);
+
+  if(jamPhase===JAM.P1){
+    jamJawOffset = 0;
+    jamRockMesh.position.y = FH/2+0.3 - p*(FH*0.55);
+    showJamLabel('⚠ Objeto irrompible detectado', '#ff6666');
+    setJamProgress(1);
+    if(dt>=dur){ jamPhase=JAM.P2; jamT0=t; playJamSound(); }
+    return 0.25;
+
+  } else if(jamPhase===JAM.P2){
+    jamJawOffset = 0;
+    scene.position.x = Math.sin(t*22)*0.025*Math.min(1, dt*5);
+    showJamLabel('💥 Fuerza excesiva — toggle plate cediendo', '#ff8800');
+    setJamProgress(2);
+    if(dt>=dur){ jamPhase=JAM.P3; jamT0=t; }
+    return 0.40;
+
+  } else if(jamPhase===JAM.P3){
+    jamJawOffset = 0.32*Math.min(1, p*2);   // jaw opens extra
+    scene.position.x = Math.sin(t*22)*0.025*(1-p);
+    togglePlateMesh.position.y = -0.38*Math.min(1, p*3);
+    matToggle.emissive.setHex(0xff6600);
+    matToggle.emissiveIntensity = 0.12 + 0.35*Math.min(1, p*3);
+    jamRockMesh.position.y -= 0.06;
+    if(jamRockMesh.position.y < -FH/2-0.4) jamRockMesh.visible=false;
+    showJamLabel('✅ Objeto expulsado sin daño al equipo', '#44ff88');
+    setJamProgress(3);
+    if(dt>=dur){ jamPhase=JAM.P4; jamT0=t; }
+    return 0.25;
+
+  } else if(jamPhase===JAM.P4){
+    jamJawOffset = 0.32*(1-p);
+    scene.position.x = 0;
+    togglePlateMesh.position.y = -0.38*(1-p);
+    matToggle.emissive.setHex(0xFFD54F);
+    matToggle.emissiveIntensity = 0.47 - 0.35*p;
+    showJamLabel('🔧 Sistema restaurado — operación normal', '#44cc88');
+    setJamProgress(4);
+    if(dt>=dur){
+      jamPhase=JAM.IDLE; jamJawOffset=0;
+      scene.position.x=0; togglePlateMesh.position.y=0;
+      matToggle.emissiveIntensity=0.12;
+      jamRockMesh.visible=false; jamLabelEl.style.display='none';
+      document.getElementById('jamProgress').style.display='none';
+      document.getElementById('jamNote').style.display='';
+      setJamProgress(0);
+    }
+    return 0.25;
+  }
+  jamJawOffset = 0;
+  return 0.25;
+}
+
 // ─── HTML Labels ─────────────────────────────────────────────────────────────
 const labelDefs = [
   { text:'Eje Excéntrico',   pos: new THREE.Vector3(SHAFT_X,     SHAFT_Y+0.70, FD/2+0.5) },
@@ -497,6 +678,26 @@ document.getElementById('chkLabels').addEventListener('change', e=>{
 });
 document.getElementById('chkRocks').addEventListener('change', e=>{ rockGrp.visible=e.target.checked; });
 
+// Clip toggle button
+document.getElementById('btnClip').addEventListener('click', ()=>{
+  clippingOn = !clippingOn;
+  applyClipping(clippingOn);
+  const btn = document.getElementById('btnClip');
+  btn.textContent = clippingOn ? '✂ Corte OFF' : '✂ Corte ON';
+  btn.classList.toggle('active', clippingOn);
+  if(clippingOn){
+    // auto-switch to side view for best cross-section visibility
+    camera.position.set(8, 2, 9);
+    controls.target.set(0, -0.3, 0);
+    controls.update();
+  }
+});
+
+// Jam simulation button
+document.getElementById('btnJam').addEventListener('click', ()=>{
+  startJam(clock.getElapsedTime());
+});
+
 const CAM_VIEWS = {
   vFront: {pos:[0,  0,  16], target:[0,-0.3,0]},
   vSide:  {pos:[18, 0,   0], target:[0,-0.3,0]},
@@ -524,14 +725,24 @@ const clock  = new THREE.Clock();
 const tmpVec = new THREE.Vector3();
 
 function updateLabels(){
-  if(!document.getElementById('chkLabels').checked) return;
-  labelEls.forEach(({el,pos})=>{
-    tmpVec.copy(pos); tmpVec.project(camera);
-    if(tmpVec.z>1){ el.style.display='none'; return; }
-    el.style.display='';
-    el.style.left=(tmpVec.x*0.5+0.5)*innerWidth+'px';
-    el.style.top =(-tmpVec.y*0.5+0.5)*innerHeight+'px';
-  });
+  const chkL = document.getElementById('chkLabels');
+  if(chkL && chkL.checked){
+    labelEls.forEach(({el,pos})=>{
+      tmpVec.copy(pos); tmpVec.project(camera);
+      if(tmpVec.z>1){ el.style.display='none'; return; }
+      el.style.display='';
+      el.style.left=(tmpVec.x*0.5+0.5)*innerWidth+'px';
+      el.style.top =(-tmpVec.y*0.5+0.5)*innerHeight+'px';
+    });
+  }
+  // Jam label position (always track if visible)
+  if(jamLabelEl.style.display!=='none'){
+    tmpVec.copy(jamLabelPos); tmpVec.project(camera);
+    if(tmpVec.z<=1){
+      jamLabelEl.style.left=(tmpVec.x*0.5+0.5)*innerWidth+'px';
+      jamLabelEl.style.top =(-tmpVec.y*0.5+0.5)*innerHeight+'px';
+    }
+  }
 }
 
 function animate(){
@@ -542,8 +753,9 @@ function animate(){
   shaftGrp.rotation.z += 0.025 * speedMult * Math.PI;
   const eccAngle = shaftGrp.rotation.z;
 
-  // 3. jaw swing ±0.25 rad
-  movJawGrp.rotation.z = Math.sin(eccAngle) * 0.25;
+  // Jaw swing: base oscillation × amplitude + extra-open offset from jam
+  const jawAmp = updateJam(t, eccAngle);
+  movJawGrp.rotation.z = Math.sin(eccAngle) * jawAmp + jamJawOffset;
 
   // Flywheels rotate with shaft
   wheelGrp.rotation.z  = shaftGrp.rotation.z;
