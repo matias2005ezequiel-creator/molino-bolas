@@ -174,7 +174,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; cursor:pointer; }
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// ─── Renderer ────────────────────────────────────────────────────────────────
+// ─── Renderer ─────────────────────────────────────────────────────────────────
 const canvas   = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -187,263 +187,344 @@ renderer.outputColorSpace  = THREE.SRGBColorSpace;
 renderer.localClippingEnabled = true;
 
 // ─── Clip plane ───────────────────────────────────────────────────────────────
-const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.1);
-let clippingOn = false;
+const clipPlane  = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.1);
+let   clippingOn = false;
 
-// ─── Scene / Camera ──────────────────────────────────────────────────────────
+// ─── Scene / Camera ───────────────────────────────────────────────────────────
 const scene  = new THREE.Scene();
 scene.background = new THREE.Color(0x0d1117);
-scene.fog        = new THREE.FogExp2(0x0d1117, 0.016);
+scene.fog        = new THREE.FogExp2(0x0d1117, 0.006);
 
-const camera = new THREE.PerspectiveCamera(44, innerWidth/innerHeight, 0.1, 200);
-camera.position.set(9, 4, 13);
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 300);
+camera.position.set(8, 2, 13);
 camera.lookAt(0, 0, 0);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
-controls.minDistance   = 4;
-controls.maxDistance   = 38;
-controls.target.set(0, -0.3, 0);
+controls.minDistance   = 5;
+controls.maxDistance   = 60;
+controls.target.set(0.5, -0.5, 0);
 controls.update();
 
-// ─── Lighting ────────────────────────────────────────────────────────────────
-scene.add(new THREE.AmbientLight(0xffffff, 1.5));          // 1. ambient
+// ─── Lighting ─────────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0xffffff, 1.5));
 
-const sun = new THREE.DirectionalLight(0xffffff, 3.0);     // 1. key
-sun.position.set(8, 12, 6);
+const sun = new THREE.DirectionalLight(0xffffff, 3.2);
+sun.position.set(10, 18, 10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.near   = 1;
-sun.shadow.camera.far    = 70;
-sun.shadow.camera.left   = -16;
-sun.shadow.camera.right  = 16;
-sun.shadow.camera.top    = 12;
-sun.shadow.camera.bottom = -12;
+sun.shadow.camera.far    = 120;
+sun.shadow.camera.left   = -22;
+sun.shadow.camera.right  = 22;
+sun.shadow.camera.top    = 18;
+sun.shadow.camera.bottom = -18;
 scene.add(sun);
 
-const rimL = new THREE.DirectionalLight(0x4488ff, 0.8);
-rimL.position.set(-6, 4, -4);
+const rimL = new THREE.DirectionalLight(0x4488ff, 0.9);
+rimL.position.set(-8, 6, -6);
 scene.add(rimL);
 
-const frontL = new THREE.PointLight(0xffffff, 2.0, 30);    // 1. new front light
-frontL.position.set(0, 2, 4);
+const frontL = new THREE.PointLight(0xffffff, 2.5, 60);
+frontL.position.set(0, 4, 10);
 scene.add(frontL);
 
-const fillL = new THREE.PointLight(0xffa040, 1.5, 28);     // 1. fill ×2.5
-fillL.position.set(0, 5, 2);
+const fillL = new THREE.PointLight(0xffa040, 2.0, 60);
+fillL.position.set(0, 8, 4);
 scene.add(fillL);
 
-// ─── Environment ─────────────────────────────────────────────────────────────
+const jamLight = new THREE.PointLight(0xff3300, 0, 22);
+jamLight.position.set(4, 0, 5);
+scene.add(jamLight);
+
+// ─── Environment ──────────────────────────────────────────────────────────────
 const pmrem  = new THREE.PMREMGenerator(renderer);
 pmrem.compileEquirectangularShader();
-const envTex = pmrem.fromScene(new THREE.Scene()).texture;
-scene.environment = envTex;
+scene.environment = pmrem.fromScene(new THREE.Scene()).texture;
 
-// ─── Materials ───────────────────────────────────────────────────────────────
-const matFrame  = new THREE.MeshStandardMaterial({ color:0xb0b8c0, metalness:0.55, roughness:0.50 }); // 6.
-const matJaw    = new THREE.MeshStandardMaterial({ color:0x606060, metalness:0.50, roughness:0.65 }); // 6.
+// ─── Materials ────────────────────────────────────────────────────────────────
+const matFrame  = new THREE.MeshStandardMaterial({ color:0xb0b8c0, metalness:0.55, roughness:0.50 });
+const matJaw    = new THREE.MeshStandardMaterial({ color:0x606060, metalness:0.50, roughness:0.65 });
 const matStriae = new THREE.MeshStandardMaterial({ color:0x484848, metalness:0.40, roughness:0.80 });
 const matShaft  = new THREE.MeshStandardMaterial({ color:0x1565C0, metalness:0.90, roughness:0.25 });
-const matWheel  = new THREE.MeshStandardMaterial({ color:0x1a3a6b, metalness:0.70, roughness:0.35 });
-const matToggle = new THREE.MeshStandardMaterial({ color:0xFFD54F, metalness:0.30, roughness:0.60, emissive:0xFFD54F, emissiveIntensity:0.12 });
+const matWheel  = new THREE.MeshStandardMaterial({ color:0x0d2b6e, metalness:0.70, roughness:0.35 });
+const matToggle = new THREE.MeshStandardMaterial({ color:0xc8a020, metalness:0.40, roughness:0.55, emissive:0xc8a020, emissiveIntensity:0.10 });
 const matSpring = new THREE.MeshStandardMaterial({ color:0x9e9e9e, metalness:0.80, roughness:0.30 });
 const matBear   = new THREE.MeshStandardMaterial({ color:0x888888, metalness:0.70, roughness:0.40 });
 const matBase   = new THREE.MeshStandardMaterial({ color:0x4a4a4a, metalness:0.40, roughness:0.80 });
 const matBolt   = new THREE.MeshStandardMaterial({ color:0x333333, metalness:0.90, roughness:0.30 });
 const matRib    = new THREE.MeshStandardMaterial({ color:0x9aabb5, metalness:0.50, roughness:0.55 });
 const matBiela  = new THREE.MeshStandardMaterial({ color:0x37474f, metalness:0.75, roughness:0.35 });
+const matEcc    = new THREE.MeshStandardMaterial({ color:0x0d47a1, metalness:0.85, roughness:0.20 });
 
 function castRecv(m){ m.castShadow=true; m.receiveShadow=true; return m; }
 
-// ─── Dimensions ──────────────────────────────────────────────────────────────
-// 5. wider (×1.5) + shorter (×0.8)
-const FW = 4.8, FH = 3.8, FD = 2.4;
-const JAW_W = FD - 0.3;   // 2.1  — jaw plate Z-span
-const JAW_H = FH - 0.5;   // 3.3
-const JAW_D = 0.26;        // jaw plate thickness
-const BASE_W = FW + 0.7, BASE_H = 0.5, BASE_D = FD + 0.4;
-const BASE_Y = -FH/2 - BASE_H/2;  // −2.15
+// ─── Dimensions ───────────────────────────────────────────────────────────────
+const FW = 9.6, FH = 7.2, FD = 4.8;
+const JAW_W = FD - 0.6;    // 4.2
+const JAW_H = FH - 1.0;    // 6.2
+const JAW_D = 0.50;
+const BASE_W = FW + 1.0, BASE_H = 0.7, BASE_D = FD + 0.8;
+const BASE_Y = -FH/2 - BASE_H/2;   // -4.25
 
-// Derived pivot / shaft positions
-const SHAFT_X = FW/2 - 0.38;          // 2.02
-const SHAFT_Y = FH/2 - 0.18;          // 1.72
-const MJ_X    = FW/2 - JAW_D/2 - 0.18; // 2.09  moving jaw pivot X
-const MJ_Y    = FH/2 - 0.28;          // 1.62
+const SHAFT_X = FW/2 - 0.80;       // 4.00
+const SHAFT_Y = FH/2 - 0.40;       // 3.20
+const MJ_X    = FW/2 - JAW_D/2 - 0.42;  // 4.33
+const MJ_Y    = FH/2 - 0.60;       // 3.00
 
-// ─── Helper ──────────────────────────────────────────────────────────────────
+const WHL_X = FW/2 + 2.2;          // 7.00
+const WHL_Y = SHAFT_Y;
+const WHL_R = 1.8;
+const HUB_R = 0.45;
+const SPOKE_LEN = WHL_R - HUB_R - 0.20;  // 1.15
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
 function box(w,h,d,mat,px,py,pz,rx=0,ry=0,rz=0){
   const m=castRecv(new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat));
   m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); return m;
 }
 
-// ─── 1. BASE ─────────────────────────────────────────────────────────────────
-scene.add(box(BASE_W, BASE_H, BASE_D, matBase, 0, BASE_Y, 0));
-for(let i=-1;i<=1;i+=2)
-  scene.add(box(BASE_W, 0.08, 0.12, matRib, 0, BASE_Y+0.12, i*0.95));
+// ─── Machine Group — all machine parts go here; clipping applied only here ────
+const machineGrp = new THREE.Group();
+scene.add(machineGrp);
 
-// ─── 2. FRAME (Bastidor) ─────────────────────────────────────────────────────
+// ─── 1. BASE ──────────────────────────────────────────────────────────────────
+const baseGrp = new THREE.Group();
+machineGrp.add(baseGrp);
+baseGrp.add(box(BASE_W, BASE_H, BASE_D, matBase, 0, BASE_Y, 0));
+for(let i=-1;i<=1;i+=2)
+  baseGrp.add(box(BASE_W, 0.14, 0.22, matRib, 0, BASE_Y+0.24, i*FD*0.38));
+
+// ─── 2. FRAME — two thick walls + side plates + cross-members + bolts ─────────
 const frameGrp = new THREE.Group();
-scene.add(frameGrp);
-frameGrp.add(
-  box(FW, FH, 0.20, matFrame,  0, 0,  FD/2),
-  box(FW, FH, 0.20, matFrame,  0, 0, -FD/2),
-  box(0.20, FH, FD, matFrame, -FW/2, 0, 0),
-  box(0.20, FH, FD, matFrame,  FW/2, 0, 0)
-);
-for(let i=0;i<5;i++){
-  const ry = -FH/2 + 0.4 + i*(FH-0.4)/4.5;
-  frameGrp.add(box(FW+0.06, 0.15, FD+0.06, matRib, 0, ry, 0));
+machineGrp.add(frameGrp);
+
+// Front and back thick walls
+frameGrp.add(box(FW, FH, 0.42, matFrame,  0, 0,  FD/2));
+frameGrp.add(box(FW, FH, 0.42, matFrame,  0, 0, -FD/2));
+// Side plates
+frameGrp.add(box(0.40, FH, FD, matFrame, -FW/2, 0, 0));
+frameGrp.add(box(0.40, FH, FD, matFrame,  FW/2, 0, 0));
+
+// Horizontal cross-members (ribs)
+for(let i=0;i<6;i++){
+  const ry = -FH/2 + 0.65 + i*(FH-0.65)/5.5;
+  frameGrp.add(box(FW+0.10, 0.26, FD+0.10, matRib, 0, ry, 0));
 }
-const boltGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.14, 8);
-[[FW/2,FH/2,FD/2],[FW/2,FH/2,-FD/2],[-FW/2,FH/2,FD/2],[-FW/2,FH/2,-FD/2],
- [FW/2,-FH/2,FD/2],[FW/2,-FH/2,-FD/2],[-FW/2,-FH/2,FD/2],[-FW/2,-FH/2,-FD/2]
+
+// Corner bolts (8 positions)
+const boltGeo = new THREE.CylinderGeometry(0.10, 0.10, 0.24, 8);
+[[ FW/2, FH/2, FD/2],[ FW/2, FH/2,-FD/2],[-FW/2, FH/2, FD/2],[-FW/2, FH/2,-FD/2],
+ [ FW/2,-FH/2, FD/2],[ FW/2,-FH/2,-FD/2],[-FW/2,-FH/2, FD/2],[-FW/2,-FH/2,-FD/2]
 ].forEach(([x,y,z])=>{
-  const b=castRecv(new THREE.Mesh(boltGeo,matBolt));
+  const b=castRecv(new THREE.Mesh(boltGeo, matBolt));
   b.rotation.z=Math.PI/2; b.position.set(x,y,z); frameGrp.add(b);
 });
 
-// ─── 3. MANDÍBULA FIJA ───────────────────────────────────────────────────────
+// ─── 3. FIXED JAW ─────────────────────────────────────────────────────────────
 const fixedJaw = new THREE.Group();
-scene.add(fixedJaw);
-fixedJaw.position.set(-(FW/2 - JAW_D/2 - 0.20), 0, 0);
-fixedJaw.rotation.z = Math.PI/10;   // ~18°
+machineGrp.add(fixedJaw);
+fixedJaw.position.set(-(FW/2 - JAW_D/2 - 0.42), 0, 0);
+fixedJaw.rotation.z = Math.PI/10;
 
-const fjBody = castRecv(new THREE.Mesh(new THREE.BoxGeometry(JAW_D, JAW_H, JAW_W), matJaw));
-fixedJaw.add(fjBody);
-for(let i=0;i<14;i++){
-  const sy = -JAW_H/2 + (i+0.5)*(JAW_H/14);
-  const s=castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.04, JAW_H/16, JAW_W*0.97), matStriae));
-  s.position.set(JAW_D/2+0.025, sy, 0); fixedJaw.add(s);
+fixedJaw.add(castRecv(new THREE.Mesh(new THREE.BoxGeometry(JAW_D, JAW_H, JAW_W), matJaw)));
+for(let i=0;i<10;i++){
+  const sy = -JAW_H/2 + (i+0.5)*(JAW_H/10);
+  const s  = castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.10, JAW_H/12, JAW_W*0.97), matStriae));
+  s.position.set(JAW_D/2+0.06, sy, 0); fixedJaw.add(s);
 }
 
-// ─── 4. MANDÍBULA MÓVIL (pivot at top) ───────────────────────────────────────
+// ─── 4. MOVING JAW — pivot at top ─────────────────────────────────────────────
 const movJawGrp = new THREE.Group();
-scene.add(movJawGrp);
+machineGrp.add(movJawGrp);
 movJawGrp.position.set(MJ_X, MJ_Y, 0);
 
 const mjBody = castRecv(new THREE.Mesh(new THREE.BoxGeometry(JAW_D, JAW_H, JAW_W), matJaw));
 mjBody.position.set(0, -JAW_H/2, 0);
 movJawGrp.add(mjBody);
-for(let i=0;i<14;i++){
-  const sy = -JAW_H/2 + (i+0.5)*(JAW_H/14) - JAW_H/2;
-  const s=castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.04, JAW_H/16, JAW_W*0.97), matStriae));
-  s.position.set(-JAW_D/2-0.025, sy, 0); movJawGrp.add(s);
+for(let i=0;i<10;i++){
+  const sy = -JAW_H/2 + (i+0.5)*(JAW_H/10) - JAW_H/2;
+  const s  = castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.10, JAW_H/12, JAW_W*0.97), matStriae));
+  s.position.set(-JAW_D/2-0.06, sy, 0); movJawGrp.add(s);
 }
 
-// ─── 5. EJE EXCÉNTRICO ───────────────────────────────────────────────────────
+// ─── 5. ECCENTRIC SHAFT ───────────────────────────────────────────────────────
 const shaftGrp = new THREE.Group();
-scene.add(shaftGrp);
+machineGrp.add(shaftGrp);
 shaftGrp.position.set(SHAFT_X, SHAFT_Y, 0);
 
+// Main shaft cylinder (runs in Z through machine depth)
 const shaftMesh = castRecv(new THREE.Mesh(
-  new THREE.CylinderGeometry(0.30, 0.30, FD+1.8, 32), matShaft));
+  new THREE.CylinderGeometry(0.40, 0.40, FD+2.6, 32), matShaft));
 shaftMesh.rotation.x = Math.PI/2;
 shaftGrp.add(shaftMesh);
 
-const matLobe = new THREE.MeshStandardMaterial({ color:0x0d47a1, metalness:0.85, roughness:0.2 });
-const lobe = castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, FD+0.8, 24), matLobe));
+// Eccentric disc
+const lobe = castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, FD+1.4, 28), matEcc));
 lobe.rotation.x = Math.PI/2;
-lobe.position.y = 0.20;      // eccentricity offset
+lobe.position.y = 0.38;
 shaftGrp.add(lobe);
 
-[-FD/2-0.62, FD/2+0.62].forEach(z=>{
-  const bearing = castRecv(new THREE.Mesh(new THREE.TorusGeometry(0.38,0.11,12,32), matBear));
+// Shaft keyway
+const shaftKey = castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, FD+2.2), matBolt));
+shaftKey.position.x = 0.40;
+shaftGrp.add(shaftKey);
+
+// Bearing caps with 4 bolts each
+const capGeo     = new THREE.CylinderGeometry(0.62, 0.62, 0.32, 24);
+const capBoltGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.18, 8);
+[-FD/2-0.88, FD/2+0.88].forEach(z=>{
+  const bearing = castRecv(new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.14, 12, 32), matBear));
   bearing.rotation.x = Math.PI/2; bearing.position.z = z; shaftGrp.add(bearing);
-  const hous = castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.46,0.46,0.24,24), matFrame));
+  const hous = castRecv(new THREE.Mesh(capGeo, matFrame));
   hous.rotation.x = Math.PI/2; hous.position.z = z; shaftGrp.add(hous);
+  for(let b=0;b<4;b++){
+    const ba = b*Math.PI/2 + Math.PI/4;
+    const bm = castRecv(new THREE.Mesh(capBoltGeo, matBolt));
+    bm.rotation.x = Math.PI/2;
+    bm.position.set(Math.cos(ba)*0.54, Math.sin(ba)*0.54, z);
+    shaftGrp.add(bm);
+  }
 });
 
-// ─── 5b. BIELA (connecting rod) — oriented every frame ───────────────────────
-// 3. visible connecting rod from eccentric lobe → moving jaw pivot
+// ─── 5b. BIELA (connecting rod) — tapered, wider, in machineGrp ───────────────
 const bielaMesh = castRecv(new THREE.Mesh(
-  new THREE.CylinderGeometry(0.075, 0.075, 1, 10), matBiela));
-scene.add(bielaMesh);
+  new THREE.CylinderGeometry(0.18, 0.13, 1, 12), matBiela));
+machineGrp.add(bielaMesh);
 const _bielaUp   = new THREE.Vector3(0, 1, 0);
 const _bielaDir  = new THREE.Vector3();
 const _bielaMid  = new THREE.Vector3();
 const _lobeWorld = new THREE.Vector3();
 const _jawPivot  = new THREE.Vector3();
 
-// ─── 6. VOLANTE — right side of frame ────────────────────────────────────────
-// 2. position at right side, not on top
-const WHL_X = FW/2 + 1.0;  // right of frame ≈ 3.4
-const WHL_Y = SHAFT_Y;     // same height as shaft = 1.72
-
+// ─── 6. FLYWHEEL — right side, I-beam spokes, #0d2b6e ─────────────────────────
 const wheelGrp = new THREE.Group();
-scene.add(wheelGrp);
+machineGrp.add(wheelGrp);
 wheelGrp.position.set(WHL_X, WHL_Y, 0);
 
-const rimMesh = castRecv(new THREE.Mesh(new THREE.TorusGeometry(1.28, 0.13, 16, 52), matWheel));
-wheelGrp.add(rimMesh);
-for(let i=0;i<6;i++){
-  const s=castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.10, 2.32, 0.13), matWheel));
-  s.rotation.z=i*Math.PI/3; wheelGrp.add(s);
+// Rim
+wheelGrp.add(castRecv(new THREE.Mesh(new THREE.TorusGeometry(WHL_R, 0.19, 16, 52), matWheel)));
+
+// 8 I-beam spokes
+for(let i=0;i<8;i++){
+  const sg = new THREE.Group();
+  sg.rotation.z = i * Math.PI/4;
+  // web
+  const web = castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.17, SPOKE_LEN, 0.32), matWheel));
+  web.position.y = HUB_R + SPOKE_LEN/2;
+  sg.add(web);
+  // rim flange
+  const rf = castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.15, 0.32), matWheel));
+  rf.position.y = HUB_R + SPOKE_LEN + 0.08;
+  sg.add(rf);
+  // hub flange
+  const hf = castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.15, 0.32), matWheel));
+  hf.position.y = HUB_R + 0.08;
+  sg.add(hf);
+  wheelGrp.add(sg);
 }
-const hub = castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.24,0.24,0.30,24), matShaft));
+
+// Hub
+const hub = castRecv(new THREE.Mesh(new THREE.CylinderGeometry(HUB_R, HUB_R, 0.52, 24), matShaft));
 hub.rotation.x = Math.PI/2; wheelGrp.add(hub);
-// back disc
-const disc = castRecv(new THREE.Mesh(
-  new THREE.CylinderGeometry(1.3,1.3,0.07,48),
-  new THREE.MeshStandardMaterial({color:0x0f2040, metalness:0.5, roughness:0.6})));
-disc.rotation.x = Math.PI/2; disc.position.z = -0.1; wheelGrp.add(disc);
+// Hub keyway
+const whlKey = castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.52), matBolt));
+whlKey.position.x = HUB_R; wheelGrp.add(whlKey);
+// Back disc
+const whlDisc = castRecv(new THREE.Mesh(
+  new THREE.CylinderGeometry(WHL_R-0.08, WHL_R-0.08, 0.09, 48),
+  new THREE.MeshStandardMaterial({color:0x091828, metalness:0.5, roughness:0.6})));
+whlDisc.rotation.x = Math.PI/2; whlDisc.position.z = -0.16; wheelGrp.add(whlDisc);
 
-// smaller counter-wheel on left side
+// Connecting shaft (X direction) from machine frame to flywheel
+const connLen = WHL_X - SHAFT_X - HUB_R - 0.22;
+const connShaft = castRecv(new THREE.Mesh(
+  new THREE.CylinderGeometry(0.28, 0.28, connLen, 16), matShaft));
+connShaft.rotation.z = -Math.PI/2;
+connShaft.position.set((SHAFT_X + WHL_X - HUB_R)/2, WHL_Y, 0);
+machineGrp.add(connShaft);
+
+// Counter-flywheel (left side)
+const W2R = 1.2, W2HubR = 0.32;
+const W2SL = W2R - W2HubR - 0.16;
 const wheel2Grp = new THREE.Group();
-scene.add(wheel2Grp);
-wheel2Grp.position.set(-(FW/2+0.65), SHAFT_Y, 0);
-const rim2 = castRecv(new THREE.Mesh(new THREE.TorusGeometry(0.90,0.10,16,40), matWheel));
-wheel2Grp.add(rim2);
-for(let i=0;i<6;i++){
-  const s=castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.08,1.65,0.10), matWheel));
-  s.rotation.z=i*Math.PI/3; wheel2Grp.add(s);
-}
-const hub2 = castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,0.22,24), matShaft));
-hub2.rotation.x=Math.PI/2; wheel2Grp.add(hub2);
+machineGrp.add(wheel2Grp);
+wheel2Grp.position.set(-(FW/2 + 1.3), WHL_Y, 0);
 
-// ─── 7. TOGGLE PLATE ─────────────────────────────────────────────────────────
+wheel2Grp.add(castRecv(new THREE.Mesh(new THREE.TorusGeometry(W2R, 0.14, 16, 40), matWheel)));
+for(let i=0;i<6;i++){
+  const sg2 = new THREE.Group();
+  sg2.rotation.z = i * Math.PI/3;
+  const web2 = castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.13, W2SL, 0.26), matWheel));
+  web2.position.y = W2HubR + W2SL/2;
+  sg2.add(web2);
+  const rf2 = castRecv(new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.26), matWheel));
+  rf2.position.y = W2HubR + W2SL + 0.06;
+  sg2.add(rf2);
+  wheel2Grp.add(sg2);
+}
+const hub2 = castRecv(new THREE.Mesh(new THREE.CylinderGeometry(W2HubR, W2HubR, 0.38, 24), matShaft));
+hub2.rotation.x = Math.PI/2; wheel2Grp.add(hub2);
+
+// Counter shaft connection
+const conn2Len = FW/2 + 1.3 - SHAFT_X - W2HubR - 0.20;
+const connShaft2 = castRecv(new THREE.Mesh(
+  new THREE.CylinderGeometry(0.22, 0.22, conn2Len, 14), matShaft));
+connShaft2.rotation.z = Math.PI/2;
+connShaft2.position.set((-FW/2-1.3 + SHAFT_X)/2, WHL_Y, 0);
+machineGrp.add(connShaft2);
+
+// ─── 7. TOGGLE PLATE — full width, #c8a020, spherical seats ───────────────────
+const TOGGLE_REST_Y = -FH/2 + 0.95;
 const toggleGrp = new THREE.Group();
-scene.add(toggleGrp);
-toggleGrp.position.set(0, -FH/2+0.55, 0);
+machineGrp.add(toggleGrp);
+toggleGrp.position.set(0, TOGGLE_REST_Y, 0);
 
 const togglePlateMesh = castRecv(new THREE.Mesh(
-  new THREE.BoxGeometry(0.15, 1.3, JAW_W*0.88), matToggle));
+  new THREE.BoxGeometry(0.24, 2.2, JAW_W*0.94), matToggle));
 toggleGrp.add(togglePlateMesh);
 
+// Spherical seats top and bottom
+const seatGeo = new THREE.SphereGeometry(0.30, 16, 12);
+[-1.10, 1.10].forEach(sy=>{
+  const seat = castRecv(new THREE.Mesh(seatGeo, matToggle));
+  seat.position.y = sy; toggleGrp.add(seat);
+});
+
+// Toggle spring (to the right side)
 const toggleSpringGrp = new THREE.Group();
 toggleGrp.add(toggleSpringGrp);
-toggleSpringGrp.position.set(0.6, 0, 0);
-const coilGeo = new THREE.TorusGeometry(0.23, 0.055, 8, 20);
-for(let i=0;i<8;i++){
+toggleSpringGrp.position.set(1.0, 0, 0);
+const coilGeo = new THREE.TorusGeometry(0.38, 0.085, 8, 22);
+for(let i=0;i<10;i++){
   const c=castRecv(new THREE.Mesh(coilGeo, matSpring));
-  c.rotation.x=Math.PI/2; c.position.y=-0.49+i*0.14; toggleSpringGrp.add(c);
+  c.rotation.x=Math.PI/2; c.position.y=-0.90+i*0.20; toggleSpringGrp.add(c);
 }
 
-// ─── 8. TENSION SPRINGS (both sides) — new ───────────────────────────────────
-// 7. vertical housing + coil, one on each Z side at bottom-right
+// ─── 8. TENSION SPRINGS ───────────────────────────────────────────────────────
 const tensionSpringGrps = [];
-[-FD/2+0.18, FD/2-0.18].forEach(z=>{
+[-FD/2+0.36, FD/2-0.36].forEach(z=>{
   const sg = new THREE.Group();
-  sg.position.set(MJ_X - 0.28, -FH/2 + 0.85, z);
-  scene.add(sg);
+  sg.position.set(MJ_X - 0.50, -FH/2 + 1.70, z);
+  machineGrp.add(sg);
   tensionSpringGrps.push(sg);
-
-  // outer housing
-  sg.add(castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,1.25,16), matBear)));
-  // top cap
-  sg.add(castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.19,0.19,0.08,16), matBolt)));
-  // bottom cap
-  const bc=castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.19,0.19,0.08,16), matBolt));
-  bc.position.y=-0.62; sg.add(bc);
+  // housing
+  sg.add(castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 2.2, 16), matBear)));
+  // caps
+  const tcap = castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.13, 16), matBolt));
+  tcap.position.y = 1.10; sg.add(tcap);
+  const bcap = castRecv(new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.13, 16), matBolt));
+  bcap.position.y = -1.10; sg.add(bcap);
   // inner coils
-  const icoilGeo = new THREE.TorusGeometry(0.098, 0.030, 6, 18);
-  for(let i=0;i<7;i++){
-    const c=castRecv(new THREE.Mesh(icoilGeo, matSpring));
-    c.rotation.x=Math.PI/2; c.position.y=-0.50+i*0.13; sg.add(c);
+  const ic = new THREE.TorusGeometry(0.15, 0.048, 6, 18);
+  for(let i=0;i<10;i++){
+    const c=castRecv(new THREE.Mesh(ic, matSpring));
+    c.rotation.x=Math.PI/2; c.position.y=-0.90+i*0.19; sg.add(c);
   }
 });
 
-// ─── 9. CRUSHING ZONES ───────────────────────────────────────────────────────
+// ─── 9. CRUSHING ZONES (not in machineGrp — not clipped) ─────────────────────
 const zoneMats = [
   new THREE.MeshStandardMaterial({color:0x1565C0,transparent:true,opacity:0.12,side:THREE.DoubleSide,depthWrite:false}),
   new THREE.MeshStandardMaterial({color:0x2e7d32,transparent:true,opacity:0.12,side:THREE.DoubleSide,depthWrite:false}),
@@ -451,38 +532,32 @@ const zoneMats = [
 ];
 const zoneGrp = new THREE.Group();
 scene.add(zoneGrp);
-const ZONE_H = FH/3 - 0.04;
+const ZONE_H = FH/3 - 0.08;
 for(let i=0;i<3;i++){
-  const zy = FH/2 - ZONE_H/2 - 0.06 - i*ZONE_H;
-  const z = new THREE.Mesh(new THREE.BoxGeometry(1.5, ZONE_H, JAW_W+0.3), zoneMats[i]);
+  const zy = FH/2 - ZONE_H/2 - 0.08 - i*ZONE_H;
+  const z  = new THREE.Mesh(new THREE.BoxGeometry(3.0, ZONE_H, JAW_W+0.5), zoneMats[i]);
   z.position.set(0, zy, 0); zoneGrp.add(z);
 }
 
-// ─── 10. ROCK PARTICLES — 4. improved ────────────────────────────────────────
+// ─── 10. ROCK PARTICLES (not in machineGrp) ───────────────────────────────────
 const ROCK_COUNT = 15;
 const rockGrp = new THREE.Group();
 scene.add(rockGrp);
 const rocks = [];
-const rockGrays = [0x555555, 0x606060, 0x707070, 0x808080, 0x909090, 0x999999];
-
+const rockGrays = [0x555555,0x606060,0x707070,0x808080,0x909090,0x999999];
 for(let i=0;i<ROCK_COUNT;i++){
-  const r   = 0.08 + Math.random()*0.10;   // radius 0.08-0.18
+  const r   = 0.14 + Math.random()*0.18;
   const geo = new THREE.IcosahedronGeometry(r, 0);
   const mat = new THREE.MeshStandardMaterial({
-    color: rockGrays[Math.floor(Math.random()*rockGrays.length)],
+    color:rockGrays[Math.floor(Math.random()*rockGrays.length)],
     roughness:0.92, metalness:0.0, flatShading:true
   });
   const m = castRecv(new THREE.Mesh(geo, mat));
   m.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
-
-  const rx = (Math.random()-0.5)*1.0;
-  const ry = FH/2 - 0.2 - i*(FH/ROCK_COUNT);
-  const rz = (Math.random()-0.5)*(JAW_W-0.5);
-  const rObj = {
-    mesh:m, x:rx, y:ry, z:rz,
-    vy: -(0.004 + Math.random()*0.006),
-    rotSpeed: (Math.random()-0.5)*0.035
-  };
+  const rx = (Math.random()-0.5)*1.8;
+  const ry = FH/2 - 0.3 - i*(FH/ROCK_COUNT);
+  const rz = (Math.random()-0.5)*(JAW_W-1.0);
+  const rObj = { mesh:m, x:rx, y:ry, z:rz, vy:-(0.008+Math.random()*0.010), rotSpeed:(Math.random()-0.5)*0.04 };
   m.position.set(rx, ry, rz);
   rockGrp.add(m);
   rocks.push(rObj);
@@ -490,55 +565,77 @@ for(let i=0;i<ROCK_COUNT;i++){
 
 // ─── Ground ───────────────────────────────────────────────────────────────────
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(40,40),
+  new THREE.PlaneGeometry(80, 80),
   new THREE.MeshStandardMaterial({color:0x1a2030, roughness:0.9, metalness:0.0}));
-ground.rotation.x=-Math.PI/2;
-ground.position.y=BASE_Y-BASE_H/2;
-ground.receiveShadow=true;
+ground.rotation.x = -Math.PI/2;
+ground.position.y  = BASE_Y - BASE_H/2;
+ground.receiveShadow = true;
 scene.add(ground);
 
-// ─── Cross-section plane at z = 0 (visible when clipping ON) ─────────────────
-const crossSectionMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(FW+1.4, FH+BASE_H+0.6),
-  new THREE.MeshStandardMaterial({color:0x666666, metalness:0.3, roughness:0.7, side:THREE.DoubleSide})
+// ─── Cross-section surface (not in machineGrp — never clipped) ────────────────
+const crossMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(20.0, FH + BASE_H + 1.8),
+  new THREE.MeshStandardMaterial({
+    color:0x2a4a6a, metalness:0.15, roughness:0.75,
+    side:THREE.DoubleSide, transparent:true, opacity:0.40, depthWrite:false
+  })
 );
-crossSectionMesh.position.set(0, -BASE_H*0.3, 0);
-crossSectionMesh.visible = false;
-scene.add(crossSectionMesh);
+crossMesh.position.set(1.0, BASE_Y/2 + 0.6, 0.02);
+crossMesh.renderOrder = 0;
+crossMesh.visible = false;
+scene.add(crossMesh);
 
-// ─── Apply / remove clipping planes from all meshes in scene ─────────────────
-function applyClipping(on) {
-  scene.traverse(obj => {
-    if(!obj.isMesh || obj === crossSectionMesh) return;
+// 45° hatch lines on cut face
+const hatchPts = [];
+const X0 = -(FW/2+1.5), X1 = WHL_X+WHL_R+0.6;
+const Y0 = BASE_Y-BASE_H*0.6, Y1 = FH/2+0.6;
+const hStep = 0.75;
+for(let d = Y0-X1; d <= Y1-X0; d += hStep){
+  const xA = Math.max(X0, Y0-d);
+  const xB = Math.min(X1, Y1-d);
+  if(xA < xB) hatchPts.push(xA, xA+d, 0.05,  xB, xB+d, 0.05);
+}
+const hatchLines = new THREE.LineSegments(
+  new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(hatchPts, 3)),
+  new THREE.LineBasicMaterial({color:0x5a8ab0, opacity:0.55, transparent:true})
+);
+hatchLines.renderOrder = 1;
+hatchLines.visible = false;
+scene.add(hatchLines);
+
+// ─── Apply / remove clipping — only machine parts, not ground/rocks/zones ─────
+function applyClipping(on){
+  machineGrp.traverse(obj=>{
+    if(!obj.isMesh) return;
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    mats.forEach(m => {
-      m.clippingPlanes = on ? [clipPlane] : [];
-      m.clipShadows    = on;
-      m.needsUpdate    = true;
-    });
+    mats.forEach(m=>{ m.clippingPlanes=on?[clipPlane]:[]; m.clipShadows=on; m.needsUpdate=true; });
   });
-  crossSectionMesh.visible = on;
+  crossMesh.visible  = on;
+  hatchLines.visible = on;
 }
 
 // ─── Jam simulation ───────────────────────────────────────────────────────────
 const JAM = { IDLE:0, P1:1, P2:2, P3:3, P4:4 };
-const JAM_DUR = [0, 0.55, 0.55, 1.0, 1.0];
-let jamPhase     = JAM.IDLE;
-let jamT0        = 0;
-let jamJawOffset = 0;   // extra open angle added on top of normal oscillation
+const JAM_DUR = [0, 0.80, 0.60, 1.30, 1.00];
+const TOGGLE_GRAVITY  = 2.2;
+const TOGGLE_MAX_DROP = 0.90;
 
-// big red rock (hidden until jam triggered)
+let jamPhase      = JAM.IDLE;
+let jamT0         = 0;
+let jamJawOffset  = 0;
+let jamRockVy     = 0;
+let toggleFallVy  = 0;
+
 const matJamRock = new THREE.MeshStandardMaterial({color:0x8B0000, metalness:0.1, roughness:0.9, flatShading:true});
-const jamRockMesh = castRecv(new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), matJamRock));
+const jamRockMesh = castRecv(new THREE.Mesh(new THREE.IcosahedronGeometry(0.65, 0), matJamRock));
 jamRockMesh.visible = false;
 scene.add(jamRockMesh);
 
-// floating jam label
-const jamLabelEl = document.createElement('div');
+const jamLabelEl  = document.createElement('div');
 jamLabelEl.className = 'label3d';
 jamLabelEl.style.cssText = 'display:none; font-size:13px; font-weight:700;';
 document.body.appendChild(jamLabelEl);
-const jamLabelPos = new THREE.Vector3(0, 0.5, FD/2+0.5);
+const jamLabelPos = new THREE.Vector3(0, 1.2, FD/2+1.0);
 
 function playJamSound(){
   try {
@@ -547,7 +644,7 @@ function playJamSound(){
     const d   = buf.getChannelData(0);
     for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length)*0.5;
     const src=ctx.createBufferSource(); src.buffer=buf;
-    const g=ctx.createGain(); g.gain.value=0.25;
+    const g=ctx.createGain(); g.gain.value=0.28;
     src.connect(g); g.connect(ctx.destination); src.start();
   } catch(e){}
 }
@@ -557,8 +654,8 @@ function setJamProgress(phase){
     const el=document.getElementById(id);
     if(!el) return;
     el.className='jp';
-    if(i+1 < phase)       el.classList.add('done');
-    else if(i+1===phase)  el.classList.add(phase<=2?'active-red':'active-grn');
+    if(i+1 < phase)      el.classList.add('done');
+    else if(i+1===phase) el.classList.add(phase<=2?'active-red':'active-grn');
   });
 }
 
@@ -569,67 +666,94 @@ function showJamLabel(text, color){
 }
 
 function startJam(t){
+  if(jamPhase!==JAM.IDLE) return;
   jamPhase=JAM.P1; jamT0=t;
-  jamRockMesh.position.set(0, FH/2+0.3, 0);
+  jamRockMesh.position.set(0.3, FH/2+1.2, 0.3);
+  jamRockVy = -1.5;
   jamRockMesh.visible=true;
   document.getElementById('jamProgress').style.display='';
   document.getElementById('jamNote').style.display='none';
-  togglePlateMesh.position.y=0;
-  matToggle.emissive.setHex(0xFFD54F);
-  matToggle.emissiveIntensity=0.12;
-  movJawGrp.rotation.z=0;
-  scene.position.x=0;
+  toggleGrp.position.y = TOGGLE_REST_Y;
+  toggleFallVy = 0;
+  tensionSpringGrps.forEach(sg=>{ sg.scale.y=1.0; });
+  matToggle.emissive.setHex(0xc8a020);
+  matToggle.emissiveIntensity=0.10;
+  jamLight.intensity=0;
   setJamProgress(1);
 }
 
-function updateJam(t, eccAngle){
-  if(jamPhase===JAM.IDLE) return 0.25;
+function updateJam(t, dt){
+  if(jamPhase===JAM.IDLE){ jamLight.intensity=0; return 0.25; }
 
-  const dt  = t - jamT0;
-  const dur = JAM_DUR[jamPhase];
-  const p   = Math.min(1, dt/dur);
+  const elapsed = t - jamT0;
+  const p = Math.min(1, elapsed/JAM_DUR[jamPhase]);
 
   if(jamPhase===JAM.P1){
+    // Rock falls in with gravity
+    jamRockVy -= 7.0 * dt;
+    jamRockMesh.position.y += jamRockVy * dt;
+    if(jamRockMesh.position.y < 0.4) jamRockMesh.position.y = 0.4;
+    jamLight.intensity = 0;
     jamJawOffset = 0;
-    jamRockMesh.position.y = FH/2+0.3 - p*(FH*0.55);
     showJamLabel('⚠ Objeto irrompible detectado', '#ff6666');
     setJamProgress(1);
-    if(dt>=dur){ jamPhase=JAM.P2; jamT0=t; playJamSound(); }
+    if(elapsed >= JAM_DUR[1]){ jamPhase=JAM.P2; jamT0=t; playJamSound(); }
     return 0.25;
 
   } else if(jamPhase===JAM.P2){
+    // Jaw pushes hard — vibration + red flicker
     jamJawOffset = 0;
-    scene.position.x = Math.sin(t*22)*0.025*Math.min(1, dt*5);
+    jamLight.intensity = 9.0 * Math.abs(Math.sin(t * 16));
     showJamLabel('💥 Fuerza excesiva — toggle plate cediendo', '#ff8800');
     setJamProgress(2);
-    if(dt>=dur){ jamPhase=JAM.P3; jamT0=t; }
-    return 0.40;
+    if(elapsed >= JAM_DUR[2]){ jamPhase=JAM.P3; jamT0=t; toggleFallVy=0; }
+    return 0.42;
 
   } else if(jamPhase===JAM.P3){
-    jamJawOffset = 0.32*Math.min(1, p*2);   // jaw opens extra
-    scene.position.x = Math.sin(t*22)*0.025*(1-p);
-    togglePlateMesh.position.y = -0.38*Math.min(1, p*3);
-    matToggle.emissive.setHex(0xff6600);
-    matToggle.emissiveIntensity = 0.12 + 0.35*Math.min(1, p*3);
-    jamRockMesh.position.y -= 0.06;
-    if(jamRockMesh.position.y < -FH/2-0.4) jamRockMesh.visible=false;
+    // Toggle falls under gravity
+    toggleFallVy += TOGGLE_GRAVITY * dt;
+    const newY = toggleGrp.position.y - toggleFallVy * dt;
+    toggleGrp.position.y = Math.max(TOGGLE_REST_Y - TOGGLE_MAX_DROP, newY);
+    const drop = TOGGLE_REST_Y - toggleGrp.position.y;
+    const dropFrac = drop / TOGGLE_MAX_DROP;
+
+    // Jaw opens extra as toggle falls
+    jamJawOffset = 0.38 * Math.min(1, dropFrac * 1.4);
+
+    // Toggle glows orange-red
+    matToggle.emissive.setHex(0xff4400);
+    matToggle.emissiveIntensity = 0.15 + 0.45 * Math.min(1, dropFrac * 1.8);
+
+    // Tension springs stretch
+    tensionSpringGrps.forEach(sg=>{ sg.scale.y = 1.0 + dropFrac * 0.70; });
+
+    // Rock falls with gravity once expelled
+    jamRockVy -= 9.8 * dt;
+    jamRockMesh.position.y += jamRockVy * dt;
+    if(jamRockMesh.position.y < -FH/2 - 1.2) jamRockMesh.visible=false;
+
+    jamLight.intensity = 6.0 * (1-p) * Math.abs(Math.sin(t * 8));
     showJamLabel('✅ Objeto expulsado sin daño al equipo', '#44ff88');
     setJamProgress(3);
-    if(dt>=dur){ jamPhase=JAM.P4; jamT0=t; }
+    if(elapsed >= JAM_DUR[3]){ jamPhase=JAM.P4; jamT0=t; }
     return 0.25;
 
   } else if(jamPhase===JAM.P4){
-    jamJawOffset = 0.32*(1-p);
-    scene.position.x = 0;
-    togglePlateMesh.position.y = -0.38*(1-p);
-    matToggle.emissive.setHex(0xFFD54F);
-    matToggle.emissiveIntensity = 0.47 - 0.35*p;
+    // Spring restores toggle (eased)
+    const ease = (1-p)*(1-p);
+    jamJawOffset = 0.38 * ease;
+    toggleGrp.position.y = TOGGLE_REST_Y - TOGGLE_MAX_DROP * ease;
+    tensionSpringGrps.forEach(sg=>{ sg.scale.y = 1.0 + ease * 0.70; });
+    matToggle.emissive.setHex(0xc8a020);
+    matToggle.emissiveIntensity = 0.10 + 0.40 * ease;
+    jamLight.intensity = 0;
     showJamLabel('🔧 Sistema restaurado — operación normal', '#44cc88');
     setJamProgress(4);
-    if(dt>=dur){
+    if(elapsed >= JAM_DUR[4]){
       jamPhase=JAM.IDLE; jamJawOffset=0;
-      scene.position.x=0; togglePlateMesh.position.y=0;
-      matToggle.emissiveIntensity=0.12;
+      toggleGrp.position.y=TOGGLE_REST_Y;
+      tensionSpringGrps.forEach(sg=>{ sg.scale.y=1.0; });
+      matToggle.emissiveIntensity=0.10;
       jamRockMesh.visible=false; jamLabelEl.style.display='none';
       document.getElementById('jamProgress').style.display='none';
       document.getElementById('jamNote').style.display='';
@@ -637,23 +761,22 @@ function updateJam(t, eccAngle){
     }
     return 0.25;
   }
-  jamJawOffset = 0;
   return 0.25;
 }
 
-// ─── HTML Labels ─────────────────────────────────────────────────────────────
+// ─── HTML Labels ──────────────────────────────────────────────────────────────
 const labelDefs = [
-  { text:'Eje Excéntrico',   pos: new THREE.Vector3(SHAFT_X,     SHAFT_Y+0.70, FD/2+0.5) },
-  { text:'Volante',          pos: new THREE.Vector3(WHL_X,        WHL_Y+1.45,  0.5) },
-  { text:'Toggle Plate',     pos: new THREE.Vector3(1.0,         -FH/2+0.55,   FD/2+0.4) },
-  { text:'Mandíbula Fija',   pos: new THREE.Vector3(-FW/2+0.5,   0.4,          FD/2+0.5) },
-  { text:'Mandíbula Móvil',  pos: new THREE.Vector3( FW/2-0.5,   0.4,          FD/2+0.5) },
-  { text:'Biela',            pos: new THREE.Vector3(SHAFT_X-0.7, SHAFT_Y-0.8,  FD/2+0.5) },
-  { text:'Alimentación ↓',   pos: new THREE.Vector3(0, FH/2+0.6, FD/2+0.4), cls:'zone' },
-  { text:'Producto ↓',       pos: new THREE.Vector3(0,-FH/2-0.4, FD/2+0.4), cls:'zone' },
-  { text:'Zona Alimentación',pos: new THREE.Vector3(-2.8, FH/2-ZONE_H/2-0.1,   FD/2+0.3), cls:'zone' },
-  { text:'Zona Reducción',   pos: new THREE.Vector3(-2.8, FH/2-ZONE_H*1.5-0.1, FD/2+0.3), cls:'zone' },
-  { text:'Zona Descarga',    pos: new THREE.Vector3(-2.8, FH/2-ZONE_H*2.5-0.1, FD/2+0.3), cls:'zone' },
+  { text:'Eje Excéntrico',   pos: new THREE.Vector3(SHAFT_X,     SHAFT_Y+1.30, FD/2+0.9) },
+  { text:'Volante',          pos: new THREE.Vector3(WHL_X,       WHL_Y+2.10,   1.0) },
+  { text:'Toggle Plate',     pos: new THREE.Vector3(1.5,         TOGGLE_REST_Y+0.2, FD/2+0.9) },
+  { text:'Mandíbula Fija',   pos: new THREE.Vector3(-FW/2+1.0,   0.8,          FD/2+0.9) },
+  { text:'Mandíbula Móvil',  pos: new THREE.Vector3( FW/2-1.0,   0.8,          FD/2+0.9) },
+  { text:'Biela',            pos: new THREE.Vector3(SHAFT_X-1.2, SHAFT_Y-1.6,  FD/2+0.9) },
+  { text:'Alimentación ↓',   pos: new THREE.Vector3(0, FH/2+1.1, FD/2+0.8), cls:'zone' },
+  { text:'Producto ↓',       pos: new THREE.Vector3(0,-FH/2-0.8, FD/2+0.8), cls:'zone' },
+  { text:'Zona Alimentación',pos: new THREE.Vector3(-5.8, FH/2-ZONE_H/2-0.2,    FD/2+0.5), cls:'zone' },
+  { text:'Zona Reducción',   pos: new THREE.Vector3(-5.8, FH/2-ZONE_H*1.5-0.2,  FD/2+0.5), cls:'zone' },
+  { text:'Zona Descarga',    pos: new THREE.Vector3(-5.8, FH/2-ZONE_H*2.5-0.2,  FD/2+0.5), cls:'zone' },
 ];
 const labelEls = labelDefs.map(def=>{
   const el=document.createElement('div');
@@ -663,7 +786,7 @@ const labelEls = labelDefs.map(def=>{
   return {el, pos:def.pos};
 });
 
-// ─── Controls wiring ─────────────────────────────────────────────────────────
+// ─── Controls wiring ──────────────────────────────────────────────────────────
 let speedMult = 1.0;
 const spdSlider = document.getElementById('spdSlider');
 const spdVal    = document.getElementById('spdVal');
@@ -678,7 +801,6 @@ document.getElementById('chkLabels').addEventListener('change', e=>{
 });
 document.getElementById('chkRocks').addEventListener('change', e=>{ rockGrp.visible=e.target.checked; });
 
-// Clip toggle button
 document.getElementById('btnClip').addEventListener('click', ()=>{
   clippingOn = !clippingOn;
   applyClipping(clippingOn);
@@ -686,23 +808,21 @@ document.getElementById('btnClip').addEventListener('click', ()=>{
   btn.textContent = clippingOn ? '✂ Corte OFF' : '✂ Corte ON';
   btn.classList.toggle('active', clippingOn);
   if(clippingOn){
-    // auto-switch to side view for best cross-section visibility
-    camera.position.set(8, 2, 9);
-    controls.target.set(0, -0.3, 0);
+    camera.position.set(2, 1, 22);
+    controls.target.set(0.5, -0.5, 0);
     controls.update();
   }
 });
 
-// Jam simulation button
 document.getElementById('btnJam').addEventListener('click', ()=>{
   startJam(clock.getElapsedTime());
 });
 
 const CAM_VIEWS = {
-  vFront: {pos:[0,  0,  16], target:[0,-0.3,0]},
-  vSide:  {pos:[18, 0,   0], target:[0,-0.3,0]},
-  vTop:   {pos:[0,  16, 0.1],target:[0,-0.3,0]},
-  vIso:   {pos:[9,  4,  13], target:[0,-0.3,0]},
+  vFront: {pos:[0,   0,   24], target:[0.5,-0.5,0]},
+  vSide:  {pos:[28,  0,    0], target:[0.5,-0.5,0]},
+  vTop:   {pos:[0,   26, 0.1], target:[0.5,-0.5,0]},
+  vIso:   {pos:[8,   2,   13], target:[0.5,-0.5,0]},
 };
 Object.keys(CAM_VIEWS).forEach(id=>{
   document.getElementById(id).addEventListener('click',()=>{
@@ -714,15 +834,16 @@ Object.keys(CAM_VIEWS).forEach(id=>{
 const regimeEl = document.getElementById('regime');
 function updateRegime(){
   const pct=Math.round(speedMult*100);
-  if(pct===0)      { regimeEl.textContent='⏹ Detenido — 0%';            regimeEl.style.borderColor='#666'; }
-  else if(pct<60)  { regimeEl.textContent=`🟡 Velocidad baja — ${pct}%`; regimeEl.style.borderColor='#f9a825'; }
+  if(pct===0)      { regimeEl.textContent='⏹ Detenido — 0%';                 regimeEl.style.borderColor='#666'; }
+  else if(pct<60)  { regimeEl.textContent=`🟡 Velocidad baja — ${pct}%`;      regimeEl.style.borderColor='#f9a825'; }
   else if(pct<=130){ regimeEl.textContent=`🟢 Trituración nominal — ${pct}%`; regimeEl.style.borderColor='#2e7d32'; }
-  else             { regimeEl.textContent=`🔴 Sobrecarga — ${pct}%`;     regimeEl.style.borderColor='#c62828'; }
+  else             { regimeEl.textContent=`🔴 Sobrecarga — ${pct}%`;          regimeEl.style.borderColor='#c62828'; }
 }
 
-// ─── Animation ───────────────────────────────────────────────────────────────
+// ─── Animation ────────────────────────────────────────────────────────────────
 const clock  = new THREE.Clock();
 const tmpVec = new THREE.Vector3();
+let lastT = 0;
 
 function updateLabels(){
   const chkL = document.getElementById('chkLabels');
@@ -735,7 +856,6 @@ function updateLabels(){
       el.style.top =(-tmpVec.y*0.5+0.5)*innerHeight+'px';
     });
   }
-  // Jam label position (always track if visible)
   if(jamLabelEl.style.display!=='none'){
     tmpVec.copy(jamLabelPos); tmpVec.project(camera);
     if(tmpVec.z<=1){
@@ -747,59 +867,58 @@ function updateLabels(){
 
 function animate(){
   requestAnimationFrame(animate);
-  const t = clock.getElapsedTime();
+  const t  = clock.getElapsedTime();
+  const dt = Math.min(t - lastT, 0.05);
+  lastT = t;
 
-  // Shaft rotation
-  shaftGrp.rotation.z += 0.025 * speedMult * Math.PI;
+  // Shaft + flywheels
+  shaftGrp.rotation.z += 1.5 * speedMult * Math.PI * dt;
   const eccAngle = shaftGrp.rotation.z;
+  wheelGrp.rotation.z  = eccAngle;
+  wheel2Grp.rotation.z = eccAngle;
 
-  // Jaw swing: base oscillation × amplitude + extra-open offset from jam
-  const jawAmp = updateJam(t, eccAngle);
+  // Jaw swing with jam offset
+  const jawAmp = updateJam(t, dt);
   movJawGrp.rotation.z = Math.sin(eccAngle) * jawAmp + jamJawOffset;
 
-  // Flywheels rotate with shaft
-  wheelGrp.rotation.z  = shaftGrp.rotation.z;
-  wheel2Grp.rotation.z = shaftGrp.rotation.z;
-
-  // 3. Biela: orient cylinder from eccentric lobe → jaw pivot each frame
+  // Biela: connect eccentric lobe → jaw pivot each frame
   lobe.getWorldPosition(_lobeWorld);
-  _jawPivot.copy(movJawGrp.position);
+  movJawGrp.getWorldPosition(_jawPivot);
   _bielaDir.subVectors(_jawPivot, _lobeWorld);
   const bLen = _bielaDir.length();
   if(bLen > 0.01){
     _bielaMid.addVectors(_lobeWorld, _jawPivot).multiplyScalar(0.5);
+    machineGrp.worldToLocal(_bielaMid);
     bielaMesh.position.copy(_bielaMid);
     bielaMesh.quaternion.setFromUnitVectors(_bielaUp, _bielaDir.divideScalar(bLen));
     bielaMesh.scale.set(1, bLen, 1);
   }
 
-  // Toggle + tension springs follow jaw
-  const jawSin = Math.sin(eccAngle);
-  toggleSpringGrp.scale.y = 1.0 + jawSin * 0.09;
-  tensionSpringGrps.forEach(sg=>{ sg.scale.y = 1.0 - jawSin * 0.13; });
+  // Toggle + tension springs follow jaw during normal operation
+  if(jamPhase === JAM.IDLE){
+    const jawSin = Math.sin(eccAngle);
+    toggleSpringGrp.scale.y = 1.0 + jawSin * 0.08;
+    tensionSpringGrps.forEach(sg=>{ sg.scale.y = 1.0 - jawSin * 0.12; });
+  }
 
-  // 4. Rocks — slow descent, converge + shrink toward bottom
+  // Rocks: slow descent, converge + shrink toward bottom
   if(rockGrp.visible){
     rocks.forEach(r=>{
-      r.y += r.vy * speedMult * 1.2;
-      // t01: 0 at top, 1 at bottom
+      r.y += r.vy * speedMult * 1.3;
       const t01 = 1 - Math.max(0, Math.min(1, (r.y + FH/2) / FH));
-      // X converges into center as V narrows
-      r.mesh.position.set(r.x*(1 - t01*0.75), r.y, r.z);
-      // scale shrinks from 1.0 → 0.30 (crushed)
-      r.mesh.scale.setScalar(1.0 - t01*0.70);
+      r.mesh.position.set(r.x*(1-t01*0.80), r.y, r.z);
+      r.mesh.scale.setScalar(1.0 - t01*0.72);
       r.mesh.rotation.y += r.rotSpeed * speedMult;
-      // respawn at top with fresh random position + full scale
-      if(r.y < -FH/2 - 0.3){
-        r.y = FH/2 - 0.15 + Math.random()*0.4;
-        r.x = (Math.random()-0.5)*1.0;
-        r.z = (Math.random()-0.5)*(JAW_W-0.5);
+      if(r.y < -FH/2 - 0.4){
+        r.y = FH/2 - 0.2 + Math.random()*0.5;
+        r.x = (Math.random()-0.5)*1.8;
+        r.z = (Math.random()-0.5)*(JAW_W-1.0);
         r.mesh.scale.setScalar(1.0);
       }
     });
   }
 
-  fillL.intensity = 1.45 + Math.sin(t*0.7)*0.06;
+  fillL.intensity = 1.90 + Math.sin(t*0.7)*0.10;
 
   controls.update();
   updateLabels();
@@ -807,11 +926,11 @@ function animate(){
 }
 animate();
 
-// ─── Resize ──────────────────────────────────────────────────────────────────
+// ─── Resize ───────────────────────────────────────────────────────────────────
 window.addEventListener('resize', ()=>{
-  camera.aspect=innerWidth/innerHeight;
+  camera.aspect = innerWidth/innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
+  renderer.setSize(innerWidth, innerHeight);
 });
 </script>
 </body>
